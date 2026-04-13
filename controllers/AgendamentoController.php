@@ -118,8 +118,9 @@ $ctrl   = new AgendamentoController();
 $action = $_GET['action'] ?? ($_POST['action'] ?? '');
 
 match ($action) {
-    'criar'  => $ctrl->criar(),
-    'buscar' => $ctrl->buscar(),
+    'agendar' => $ctrl->criar(), // ADICIONE ESTA LINHA: Agora ele aceita seu HTML
+    'criar'   => $ctrl->criar(), // Mantemos esta para não quebrar outras partes
+    'buscar'  => $ctrl->buscar(),
     default  => (function () {
         header('Content-Type: application/json; charset=utf-8');
         http_response_code(400);

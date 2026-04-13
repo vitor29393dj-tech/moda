@@ -14,20 +14,42 @@ class ClienteController {
     }
 
     /**
-     * POST /controllers/ClienteController.php?action=cadastrar
-     * Cadastra ou retorna cliente existente (por CPF)
+     * NOVO MÉTODO: Busca cliente pelo CPF para o dinamismo do JS
+     */
+    public function buscar(): void {
+        header('Content-Type: application/json');
+        
+        $cpfRaw = $_GET['cpf'] ?? '';
+        $cpfLimpo = $this->limparCpf($cpfRaw);
+        $cpfFormatado = $this->formatarCpf($cpfLimpo);
+
+        $cliente = $this->model->buscarPorCpf($cpfFormatado);
+
+        if ($cliente) {
+            echo json_encode([
+                'success' => true, 
+                'cliente' => [
+                    'id'       => $cliente['id'],
+                    'nome'     => $cliente['nome'],
+                    'telefone' => $cliente['telefone']
+                ]
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Cliente não encontrado.']);
+        }
+        exit;
+    }
+
+    /**
+     * Cadastra ou retorna cliente existente (via formulário)
      */
     public function cadastrar(): void {
-        // Removido o header JSON para permitir o alerta em JavaScript
-        
         $dados = $this->getPostJson();
 
-        // --- Validação ---
         $erros = [];
-
         $nome = trim($dados['nome'] ?? '');
         if (empty($nome) || strlen($nome) < 3) {
-            $erros[] = 'Nome completo é obrigatório (mínimo 3 caracteres).';
+            $erros[] = 'Nome completo é obrigatório.';
         }
 
         $cpf = $this->limparCpf($dados['cpf'] ?? '');
@@ -40,43 +62,29 @@ class ClienteController {
             $erros[] = 'Telefone inválido.';
         }
 
-        // Se houver erros, mostra o primeiro erro em um alerta e volta
         if ($erros) {
-            echo "<script>
-                    alert('" . $erros[0] . "');
-                    window.history.back();
-                  </script>";
+            echo "<script>alert('" . $erros[0] . "'); window.history.back();</script>";
             return;
         }
 
         $cpfFormatado = $this->formatarCpf($cpf);
-
-        // Verifica se CPF já existe no banco 'moda'
         $existente = $this->model->buscarPorCpf($cpfFormatado);
+
         if ($existente) {
-            echo "<script>
-                    alert('Bem-vindo de volta! Identificamos seu cadastro.');
-                    window.location.href = '../index.html#agendamento'; 
-                  </script>";
+            echo "<script>alert('Bem-vindo de volta!'); window.location.href = '../index.html#agendamento';</script>";
             return;
         }
 
-        // Cria o novo cliente usando o Model
-        $id = $this->model->criar([
+        $this->model->criar([
             'nome'     => $nome,
             'cpf'      => $cpfFormatado,
             'telefone' => $telefone,
         ]);
 
-        // Redirecionamento de sucesso para o fluxo do site
-        echo "<script>
-                alert('Cadastro realizado com sucesso!');
-                window.location.href = '../index.html#agendamento'; 
-              </script>";
+        echo "<script>alert('Cadastro realizado com sucesso!'); window.location.href = '../index.html#agendamento';</script>";
     }
 
     // ---- Helpers ----
-
     private function getPostJson(): array {
         $raw = file_get_contents('php://input');
         $dados = json_decode($raw, true);
@@ -93,12 +101,9 @@ class ClienteController {
 
     private function validarCpf(string $cpf): bool {
         if (strlen($cpf) !== 11 || preg_match('/^(\d)\1{10}$/', $cpf)) return false;
-
         for ($t = 9; $t <= 10; $t++) {
             $sum = 0;
-            for ($i = 0; $i < $t; $i++) {
-                $sum += $cpf[$i] * ($t + 1 - $i);
-            }
+            for ($i = 0; $i < $t; $i++) $sum += $cpf[$i] * ($t + 1 - $i);
             $r = ((10 * $sum) % 11) % 10;
             if ($cpf[$t] != $r) return false;
         }
@@ -106,12 +111,13 @@ class ClienteController {
     }
 }
 
-// --- Roteamento simples ---
+// --- Roteamento ---
 $ctrl = new ClienteController();
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 match ($action) {
     'cadastrar' => $ctrl->cadastrar(),
+    'buscar'    => $ctrl->buscar(),
     default     => (function () {
         http_response_code(400);
         echo "Ação inválida.";

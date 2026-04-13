@@ -1172,9 +1172,14 @@
     Já é cadastrado? Informe seu CPF para recuperar seus dados.
   </p>
 
-  <form action="controllers/AgendamentoController.php?action=agendar" method="POST" class="form-section">
+  <form action="controllers/AgendamentoController.php" method="POST" class="form-section">
     
     <input type="hidden" name="action" value="agendar">
+
+    <input type="hidden" name="cliente_id" id="cliente_id" value=""> 
+    <input type="hidden" name="roupa_id" id="roupa_id" value="">
+    <input type="hidden" name="data_agendamento" id="data_agendamento" value="">
+    <input type="hidden" name="horario" id="horario" value="">
     
     <div class="field">
       <label for="agCpf">CPF *</label>
@@ -1195,9 +1200,9 @@
 
     <div style="display:flex;gap:12px;margin-top:8px;">
       <button type="button" class="btn-outline" onclick="irStep(2)">← Voltar</button>
-      <button type="submit" class="btn-submit" id="btnFinalizar">
-        Confirmar Agendamento
-      </button>
+      <button type="button" onclick="finalizarAgendamentoManual()" class="btn-submit" id="btnFinalizar">
+  Confirmar Agendamento
+</button>
     </div>
   </form>
 </div>
@@ -1524,36 +1529,50 @@
     /* ============================================================
        AGENDAMENTO — steps
        ============================================================ */
-    let stepAtual = 1;
+       let stepAtual = 1;
 
-    function irStep(n) {
-      // Validação antes de avançar
-      if (n === 2 && stepAtual === 1 && !state.agendamento.roupa_id) {
-        toast('Selecione uma peça para continuar.', 'error'); return;
-      }
-      if (n === 3 && stepAtual === 2) {
-        if (!state.agendamento.data) { toast('Selecione uma data.', 'error'); return; }
-        if (!state.agendamento.horario) { toast('Selecione um horário.', 'error'); return; }
-        state.agendamento.observacoes = document.getElementById('obsAg').value;
-      }
+   function irStep(n) {
+  // Validação antes de avançar
+  if (n === 2 && stepAtual === 1 && !state.agendamento.roupa_id) {
+    toast('Selecione uma peça para continuar.', 'error'); return;
+  }
+  
+  if (n === 3 && stepAtual === 2) {
+    if (!state.agendamento.data) { toast('Selecione uma data.', 'error'); return; }
+    if (!state.agendamento.horario) { toast('Selecione um horário.', 'error'); return; }
+    state.agendamento.observacoes = document.getElementById('obsAg').value;
 
-      stepAtual = n;
-
-      document.querySelectorAll('.step-content').forEach((c, i) => {
-        c.classList.toggle('active', i + 1 === n);
-      });
-
-      document.querySelectorAll('.step').forEach((s, i) => {
-        s.classList.toggle('active', i + 1 === n);
-        s.classList.toggle('done', i + 1 < n);
-        const num = s.querySelector('.step-num');
-        if (i + 1 < n) num.textContent = '✓';
-        else num.textContent = i + 1;
-      });
-
-      if (n === 2) atualizarPreviewRoupa();
-      if (n === 3) preencherDadosCliente();
+   // --- NOVA PONTE DINÂMICA (ATUALIZADA) ---
+    const campoCliente = document.getElementById('cliente_id');
+    
+    // Se a busca por CPF já preencheu o campo (cliente antigo), mantemos.
+    // Se estiver vazio, tentamos o state ou deixamos vazio (cliente novo).
+    if (campoCliente.value === "") {
+        campoCliente.value = state.cliente ? state.cliente.id : ""; 
     }
+
+    document.getElementById('roupa_id').value = state.agendamento.roupa_id;
+    document.getElementById('data_agendamento').value = state.agendamento.data;
+    document.getElementById('horario').value = state.agendamento.horario;
+  }
+
+  stepAtual = n;
+
+  document.querySelectorAll('.step-content').forEach((c, i) => {
+    c.classList.toggle('active', i + 1 === n);
+  });
+
+  document.querySelectorAll('.step').forEach((s, i) => {
+    s.classList.toggle('active', i + 1 === n);
+    s.classList.toggle('done', i + 1 < n);
+    const num = s.querySelector('.step-num');
+    if (i + 1 < n) num.textContent = '✓';
+    else num.textContent = i + 1;
+  });
+
+  if (n === 2) atualizarPreviewRoupa();
+  if (n === 3) preencherDadosCliente();
+}
 
     function renderizarRoupasNoAgendamento() {
       const sel = document.getElementById('roupaSelector');
@@ -1618,17 +1637,43 @@
       document.getElementById('btnStep2Next').disabled = false;
     }
 
+   
     /* ============================================================
-       STEP 3 — Dados do cliente
+       STEP 3 — Dados do cliente (BUSCA DINÂMICA)
        ============================================================ */
     document.getElementById('agCpf').addEventListener('input', async function () {
       aplicarMascaraCpf(this);
       const c = this.value.replace(/\D/g, '');
+      
       if (c.length === 11) {
         if (validarCpfJS(c)) {
           document.getElementById('erroAgCpf').classList.remove('show');
-          // Tenta buscar cliente existente pelo CPF — opcional para UX
-          // (requer endpoint no back-end; mantido simples aqui)
+          
+          // --- AQUI ENTRA A MÁGICA ---
+          try {
+            const response = await fetch(`controllers/ClienteController.php?action=buscar&cpf=${c}`);
+            const dados = await response.json();
+
+            if (dados.success && dados.cliente) {
+              // Preenche os campos com o que veio do banco
+              document.getElementById('agNome').value = dados.cliente.nome;
+              document.getElementById('agTel').value = dados.cliente.telefone;
+              
+              // Guarda o ID real no campo escondido (Adeus ID "5" fixo!)
+              document.getElementById('cliente_id').value = dados.cliente.id;
+              
+              toast('Bem-vindo de volta! Seus dados foram preenchidos.', 'success');
+            } else {
+              // Se não achar no banco, limpa para novo cadastro
+              document.getElementById('agNome').value = '';
+              document.getElementById('agTel').value = '';
+              document.getElementById('cliente_id').value = '';
+            }
+          } catch (e) {
+            console.error("Erro ao buscar cliente:", e);
+          }
+          // ---------------------------
+
           document.getElementById('dadosClienteExtra').style.display = 'block';
         } else {
           document.getElementById('erroAgCpf').classList.add('show');
@@ -1637,18 +1682,6 @@
         document.getElementById('erroAgCpf').classList.remove('show');
       }
     });
-
-    document.getElementById('agTel').addEventListener('input', function () { aplicarMascaraTel(this); });
-
-    function preencherDadosCliente() {
-      if (state.cliente) {
-        document.getElementById('agCpf').value = state.cliente.cpf;
-        document.getElementById('agCpf').dispatchEvent(new Event('input'));
-        document.getElementById('agNome').value = state.cliente.nome;
-        document.getElementById('agTel').value = state.cliente.telefone;
-      }
-    }
-
     /* ============================================================
        FINALIZAR AGENDAMENTO
        ============================================================ */
@@ -1708,6 +1741,31 @@
       exibirConfirmacao(ag, cliente);
     } 
       */
+
+async function finalizarAgendamentoManual() {
+  const form = document.querySelector('#step3 form');
+  const formData = new FormData(form);
+
+  const btn = document.getElementById('btnFinalizar');
+  btn.disabled = true;
+  btn.innerHTML = 'Confirmando...';
+
+  // Mudamos aqui: enviamos o formData direto, sem converter para JSON
+  const res = await fetch('controllers/AgendamentoController.php?action=agendar', {
+    method: 'POST',
+    body: formData // O PHP entende isso melhor
+  });
+
+  const data = await res.json();
+
+  if (res.ok && data.success) {
+    exibirConfirmacao(data.agendamento, { nome: formData.get('nome') });
+  } else {
+    toast(data.error || 'Erro ao agendar', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Confirmar Agendamento';
+  }
+}
     function exibirConfirmacao(ag, cliente) {
       // Oculta steps
       document.querySelectorAll('.step-content, .steps').forEach(el => el.style.display = 'none');

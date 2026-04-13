@@ -1,27 +1,33 @@
 <?php
-// 1. INÍCIO DO TRABALHO DO SERVIDOR (O "TOPO")
 session_start();
 
-// Verificação de segurança: se não estiver logado, volta para o login
 if (!isset($_SESSION['logado']) || $_SESSION['logado'] !== true) {
     header('Location: login.html');
     exit;
 }
 
-// Conexão com o banco de dados 'moda'
+// Pegar qual seção mostrar (padrão é agendamentos)
+$secao = $_GET['secao'] ?? 'agendamentos';
+
 try {
     $pdo = new PDO("mysql:host=localhost;dbname=moda", "root", "");
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // SQL que junta as tabelas para pegar os nomes reais em vez de números (IDs)
-    $sql = "SELECT a.data_agendamento, a.horario, a.status, c.nome as cliente_nome, r.nome as roupa_nome 
-            FROM agendamentos a
-            JOIN clientes c ON a.cliente_id = c.id
-            JOIN roupas r ON a.roupa_id = r.id
-            ORDER BY a.data_agendamento ASC";
-    
-    $stmt = $pdo->query($sql);
-    $agendamentos = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Lógica para carregar os dados dependendo da seção
+    if ($secao === 'clientes') {
+        $sql = "SELECT * FROM clientes ORDER BY nome ASC";
+        $stmt = $pdo->query($sql);
+        $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        // SQL de Agendamentos (com JOIN)
+        $sql = "SELECT a.id, a.data_agendamento, a.horario, a.status, c.nome as cliente_nome, r.nome as roupa_nome 
+                FROM agendamentos a
+                JOIN clientes c ON a.cliente_id = c.id
+                JOIN roupas r ON a.roupa_id = r.id
+                ORDER BY a.data_agendamento ASC";
+        $stmt = $pdo->query($sql);
+        $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 
 } catch (PDOException $e) {
     die("Erro ao conectar ao banco: " . $e->getMessage());
@@ -32,7 +38,6 @@ try {
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Atelier — Painel Administrativo</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
     <style>
@@ -43,160 +48,100 @@ try {
             --branco: #FFFFFF;
         }
 
-        body {
-            font-family: 'DM Sans', sans-serif;
-            background-color: var(--bege-claro);
-            margin: 0;
-            display: flex;
-        }
+        body { font-family: 'DM Sans', sans-serif; background-color: var(--bege-claro); margin: 0; display: flex; }
 
         /* Menu Lateral */
-        .sidebar {
-            width: 250px;
-            height: 100vh;
-            background-color: var(--cinza-escuro);
-            color: var(--bege-claro);
-            padding: 30px 20px;
-            position: fixed;
-        }
+        .sidebar { width: 250px; height: 100vh; background-color: var(--cinza-escuro); color: var(--bege-claro); padding: 30px 20px; position: fixed; }
+        .sidebar h2 { font-family: serif; letter-spacing: 2px; border-bottom: 1px solid rgba(247,243,238,0.2); padding-bottom: 10px; }
+        .sidebar a { display: block; color: var(--bege-claro); text-decoration: none; padding: 12px 0; font-size: 14px; text-transform: uppercase; transition: 0.3s; }
+        .sidebar a:hover, .sidebar a.active { color: var(--dourado); font-weight: bold; }
 
-        .sidebar h2 {
-            font-family: serif;
-            letter-spacing: 2px;
-            font-size: 20px;
-            margin-bottom: 40px;
-            border-bottom: 1px solid rgba(247, 243, 238, 0.2);
-            padding-bottom: 10px;
-        }
+        /* Conteúdo */
+        .main-content { margin-left: 250px; padding: 40px; width: calc(100% - 250px); }
+        .header-dashboard { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+        .card-tabela { background: var(--branco); padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-radius: 4px; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px; background-color: var(--bege-claro); font-size: 12px; }
+        td { padding: 15px 12px; border-bottom: 1px solid #eee; font-size: 14px; }
 
-        .sidebar a {
-            display: block;
-            color: var(--bege-claro);
-            text-decoration: none;
-            padding: 12px 0;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: 0.3s;
-        }
+        /* Cores de Status */
+        .status { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+        .status-pendente { background: #fff3e0; color: #ef6c00; }
+        .status-confirmado { background: #e3f2fd; color: #1565c0; }
+        .status-concluido { background: #e8f5e9; color: #2e7d32; }
 
-        .sidebar a:hover {
-            color: var(--dourado);
-        }
-
-        /* Conteúdo Principal */
-        .main-content {
-            margin-left: 250px;
-            padding: 40px;
-            width: 100%;
-        }
-
-        .header-dashboard {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 40px;
-        }
-
-        .header-dashboard h1 {
-            color: var(--cinza-escuro);
-            font-size: 24px;
-        }
-
-        .btn-logout {
-            color: #cc0000;
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        /* Tabela de Agendamentos */
-        .card-tabela {
-            background: var(--branco);
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-            border-radius: 4px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th {
-            text-align: left;
-            padding: 12px;
-            background-color: var(--bege-claro);
-            color: var(--cinza-escuro);
-            text-transform: uppercase;
-            font-size: 12px;
-            letter-spacing: 1px;
-        }
-
-        td {
-            padding: 15px 12px;
-            border-bottom: 1px solid #eee;
-            font-size: 14px;
-            color: #555;
-        }
-
-        .status {
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: bold;
-            background: #e8f5e9;
-            color: #2e7d32;
-        }
+        .btn-acao { text-decoration: none; padding: 4px 8px; font-size: 12px; border-radius: 3px; margin-right: 5px; color: white; }
+        .btn-check { background-color: #2e7d32; }
+        .btn-del { background-color: #c62828; }
     </style>
 </head>
 <body>
 
     <div class="sidebar">
         <h2>ATELIER</h2>
-        <a href="#">Início</a>
-        <a href="#">Agendamentos</a>
-        <a href="#">Clientes</a>
+        <a href="dashboard.php" class="<?= $secao == 'agendamentos' ? 'active' : '' ?>">Agendamentos</a>
+        <a href="dashboard.php?secao=clientes" class="<?= $secao == 'clientes' ? 'active' : '' ?>">Clientes</a>
         <a href="#">Catálogo</a>
     </div>
 
     <div class="main-content">
         <div class="header-dashboard">
-            <h1>Painel de Agendamentos</h1>
-            <a href="login.html" class="btn-logout">Sair</a>
+            <h1><?= $secao === 'clientes' ? 'Lista de Clientes' : 'Painel de Agendamentos' ?></h1>
+            <a href="../controllers/AuthController.php?action=logout" class="btn-logout" style="color: red; text-decoration: none;">Sair</a>
         </div>
 
         <div class="card-tabela">
             <table>
-                <thead>
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Data</th>
-                        <th>Horário</th>
-                        <th>Peça</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (count($agendamentos) > 0): ?>
-                        <?php foreach ($agendamentos as $agendamento): ?>
+                <?php if ($secao === 'clientes'): ?>
+                    <thead>
                         <tr>
-                            <td><?php echo htmlspecialchars($agendamento['cliente_nome']); ?></td>
-                            <td><?php echo date('d/m/Y', strtotime($agendamento['data_agendamento'])); ?></td>
-                            <td><?php echo $agendamento['horario']; ?></td>
-                            <td><?php echo htmlspecialchars($agendamento['roupa_nome']); ?></td>
-                            <td><span class="status"><?php echo htmlspecialchars($agendamento['status']); ?></span></td>
+                            <th>Nome</th>
+                            <th>CPF</th>
+                            <th>Telefone</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($dados as $c): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($c['nome']) ?></td>
+                            <td><?= htmlspecialchars($c['cpf']) ?></td>
+                            <td><?= htmlspecialchars($c['telefone']) ?></td>
                         </tr>
                         <?php endforeach; ?>
-                    <?php else: ?>
+                    </tbody>
+
+                <?php else: ?>
+                    <thead>
                         <tr>
-                            <td colspan="5" style="text-align:center;">Nenhum agendamento encontrado no banco.</td>
+                            <th>Cliente</th>
+                            <th>Data/Hora</th>
+                            <th>Peça</th>
+                            <th>Status</th>
+                            <th>Ações</th>
                         </tr>
-                    <?php endif; ?>
-                </tbody>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($dados as $a): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($a['cliente_nome']) ?></td>
+                            <td><?= date('d/m/Y', strtotime($a['data_agendamento'])) ?> às <?= substr($a['horario'], 0, 5) ?></td>
+                            <td><?= htmlspecialchars($a['roupa_nome']) ?></td>
+                            <td>
+                                <span class="status status-<?= strtolower($a['status']) ?>">
+                                    <?= $a['status'] ?>
+                                </span>
+                            </td>
+                            <td>
+                                <a href="#" class="btn-acao btn-check" title="Concluir">✓</a>
+                                <a href="#" class="btn-acao btn-del" title="Excluir">✕</a>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                <?php endif; ?>
             </table>
         </div>
     </div>
-
 </body>
 </html>
