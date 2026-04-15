@@ -1,4 +1,6 @@
 <?php
+session_start(); // ADICIONADO: Necessário para acessar o ID do usuário logado
+
 /**
  * Controller: Agendamento
  * Gerencia criação e consulta de agendamentos
@@ -31,10 +33,19 @@ class AgendamentoController {
 
         $erros = [];
 
-        // Valida cliente
-        $clienteId = filter_var($dados['cliente_id'] ?? 0, FILTER_VALIDATE_INT);
-        if (!$clienteId || !$this->clienteModel->buscarPorId($clienteId)) {
-            $erros[] = 'Cliente inválido ou não encontrado.';
+        // --- ALTERAÇÃO AQUI: Vínculo Dinâmico com a Sessão ---
+        // Em vez de pegar do formulário, pegamos o ID de quem está logado
+        if (!isset($_SESSION['logado'])) {
+            http_response_code(401);
+            echo json_encode(['success' => false, 'erros' => ['Você precisa estar logado para agendar.']]);
+            return;
+        }
+        $clienteId = $_SESSION['usuario_id']; 
+        // ---------------------------------------------------
+
+        // Valida se o cliente da sessão ainda existe no banco
+        if (!$this->clienteModel->buscarPorId($clienteId)) {
+            $erros[] = 'Sessão inválida. Faça login novamente.';
         }
 
         // Valida roupa
@@ -72,7 +83,7 @@ class AgendamentoController {
         }
 
         $id = $this->model->criar([
-            'cliente_id'      => $clienteId,
+            'cliente_id'      => $clienteId, // Agora usa o ID correto da sessão
             'roupa_id'        => $roupaId,
             'data_agendamento' => $data,
             'horario'         => $horario . ':00',
@@ -118,8 +129,8 @@ $ctrl   = new AgendamentoController();
 $action = $_GET['action'] ?? ($_POST['action'] ?? '');
 
 match ($action) {
-    'agendar' => $ctrl->criar(), // ADICIONE ESTA LINHA: Agora ele aceita seu HTML
-    'criar'   => $ctrl->criar(), // Mantemos esta para não quebrar outras partes
+    'agendar' => $ctrl->criar(),
+    'criar'   => $ctrl->criar(),
     'buscar'  => $ctrl->buscar(),
     default  => (function () {
         header('Content-Type: application/json; charset=utf-8');

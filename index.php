@@ -1,3 +1,5 @@
+<?php session_start(); ?>
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 
@@ -1014,6 +1016,12 @@
         <button class="nav-btn" onclick="showPage('agendamento')">
           <span>Agendamento</span>
         </button>
+        
+        <?php if(isset($_SESSION['logado'])): ?>
+          <button class="nav-btn" onclick="window.location.href='logout.php'" style="color: #ff4d4d; border-left: 1px solid #ddd; margin-left: 10px;">
+            <span>Sair</span>
+          </button>
+        <?php endif; ?>
       </nav>
     </div>
   </header>
