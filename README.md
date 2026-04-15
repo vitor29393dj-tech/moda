@@ -73,6 +73,26 @@ php -S localhost:8080
 
 ## 🎯 Funcionalidades
 
+```mermaid
+flowchart LR
+    C[Cliente]
+    A[Administrador]
+
+    UC1[Visualizar Catálogo de Roupas]
+    UC2[Cadastrar Dados Pessoais]
+    UC3[Realizar Agendamento de Peça]
+    UC4[Gerenciar Estoque de Roupas]
+    UC5[Consultar Agendamentos Realizados]
+
+    C --> UC1
+    C --> UC2
+    C --> UC3
+
+    A --> UC3
+    A --> UC4
+    A --> UC5
+```
+
 ### 🛍️ Catálogo
 - Grid responsivo com foto, nome, categoria e preço
 - Filtro por categoria (chips interativos)
@@ -127,7 +147,7 @@ Todas as respostas são em **JSON**.
 
 ## 🗄️ Modelo de Dados
 
-```
+
 clientes          roupas
 ─────────         ──────────
 id (PK)           id (PK)
@@ -148,4 +168,31 @@ horario
 status
 observacoes
 criado_em
+
+```mermaid
+classDiagram
+    direction LR
+    class Cliente {
+        +int id
+        +string nome
+        +string cpf
+        +cadastrar()
+    }
+    
+    class Roupa {
+        +int id
+        +string nome
+        +float preco
+        +listar()
+    }
+
+    class Agendamento {
+        +int id
+        +date data_agendamento
+        +string status
+        +criar()
+    }
+
+    Cliente "1" -- "*" Agendamento
+    Roupa "1" -- "*" Agendamento
 ```
