@@ -36,23 +36,21 @@ $tipo = $_GET['tipo'] ?? '';
       padding: 40px 20px;
     }
 
-    /* CONTAINER PRINCIPAL */
     .wrapper {
       position: relative;
       z-index: 1;
       width: 100%;
-      max-width: 450px; /* Largura para caixa única centralizada */
+      max-width: 450px;
     }
 
-    /* CABEÇALHO */
     .header {
       text-align: center;
       margin-bottom: 50px;
     }
     .logo-titulo {
-      font-family: 'Cormorant Garamond', serif; /* Fonte de Alta Costura */
+      font-family: 'Cormorant Garamond', serif;
       font-size: 3.5rem;
-      font-weight: 300; /* Super fina e elegante */
+      font-weight: 300;
       letter-spacing: 0.25em;
       text-transform: uppercase;
       margin-bottom: 10px;
@@ -65,7 +63,6 @@ $tipo = $_GET['tipo'] ?? '';
       font-weight: 400;
     }
 
-    /* FEEDBACK DE MENSAGEM */
     .msg-feedback {
       margin-bottom: 30px;
       padding: 15px 25px;
@@ -76,7 +73,6 @@ $tipo = $_GET['tipo'] ?? '';
     .msg-feedback.erro { background: rgba(139,32,32,0.15); color: #e8a0a0; border: 1px solid #8b2020; }
     .msg-feedback.sucesso { background: rgba(26,74,46,0.15); color: #90c8a8; border: 1px solid #2a7a4e; }
 
-    /* AUTH CONTAINER CENTRALIZADO */
     .auth-container {
       background: rgba(255,255,255,0.015);
       border: 1px solid rgba(184,150,12,0.1);
@@ -85,7 +81,6 @@ $tipo = $_GET['tipo'] ?? '';
       position: relative;
     }
 
-    /* LÓGICA DE TROCA DE PAINEL */
     .form-panel { display: none; animation: fadeIn 0.6s ease forwards; }
     .form-panel.active { display: block; }
 
@@ -94,14 +89,13 @@ $tipo = $_GET['tipo'] ?? '';
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    /* TÍTULOS DO FORMULÁRIO (CORRIGIDOS PARA FICAREM BONITOS) */
     .form-titulo {
-      font-family: 'Cormorant Garamond', serif; /* Fonte elegante de volta */
-      font-size: 2.8rem; /* Tamanho maior para destaque */
-      font-weight: 300; /* Fina e sofisticada */
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.8rem;
+      font-weight: 300;
       margin-bottom: 15px;
       line-height: 1.1;
-      letter-spacing: -0.01em; /* Ajuste sutil */
+      letter-spacing: -0.01em;
     }
     .form-descricao {
       font-size: 0.9rem;
@@ -111,7 +105,6 @@ $tipo = $_GET['tipo'] ?? '';
       letter-spacing: 0.02em;
     }
 
-    /* CAMPOS DE INPUT SUTIS */
     .campo { margin-bottom: 30px; text-align: left; position: relative; }
     .campo label {
       display: block; font-size: 0.7rem; letter-spacing: 0.2em;
@@ -127,7 +120,6 @@ $tipo = $_GET['tipo'] ?? '';
       border-bottom-color: var(--dourado-claro);
     }
 
-    /* BOTÃO SUBMIT */
     .btn-submit {
       width: 100%; padding: 18px; background: transparent;
       border: 1px solid var(--dourado); color: var(--dourado);
@@ -140,7 +132,6 @@ $tipo = $_GET['tipo'] ?? '';
       box-shadow: 0 5px 25px rgba(184,150,12,0.25);
     }
 
-    /* LINKS DE ALTERNAÇÃO */
     .toggle-link {
       display: block; text-align: center; margin-top: 35px;
       font-size: 0.85rem; color: var(--cinza); cursor: pointer;
@@ -154,7 +145,6 @@ $tipo = $_GET['tipo'] ?? '';
       color: var(--dourado-claro);
     }
 
-    /* CORREÇÃO DO AUTO-COMPLETAR */
     input:-webkit-autofill {
       -webkit-text-fill-color: var(--creme) !important;
       -webkit-box-shadow: 0 0 0px 1000px var(--preto) inset !important;
@@ -170,24 +160,24 @@ $tipo = $_GET['tipo'] ?? '';
     </header>
 
     <?php if (!empty($msg)): ?>
-  <?php
-    $classe = ($tipo === 'erro') ? 'erro' : 'sucesso';
-    $mensagens = [
-      'login_invalido'     => 'CPF ou senha incorretos.',
-      'cadastro_ok'        => 'Cadastro realizado com sucesso! Acesse sua conta.',
-      'cpf_existente'      => 'Este CPF já possui um cadastro.',
-      'campos_obrigatorios'=> 'Preencha todos os campos obrigatórios antes de continuar.',
-    ];
-    $texto = $mensagens[$msg] ?? htmlspecialchars($msg);
-  ?>
-  <div class="msg-feedback <?= $classe ?>"><?= $texto ?></div>
-<?php endif; ?>
+      <?php
+        $classe = ($tipo === 'erro') ? 'erro' : 'sucesso';
+        $mensagens = [
+          'login_invalido'     => 'CPF ou senha incorretos.',
+          'cadastro_ok'        => 'Cadastro realizado com sucesso! Acesse sua conta.',
+          'cpf_existente'      => 'Este CPF já possui um cadastro.',
+          'campos_obrigatorios'=> 'Preencha todos os campos obrigatórios antes de continuar.',
+        ];
+        $texto = $mensagens[$msg] ?? htmlspecialchars($msg);
+      ?>
+      <div class="msg-feedback <?= $classe ?>"><?= $texto ?></div>
+    <?php endif; ?>
 
     <div class="auth-container">
       <div id="panel-login" class="form-panel active">
         <h2 class="form-titulo">Acesse sua conta</h2>
         <p class="form-descricao">Entre para ver seus agendamentos.</p>
-        ​<form action="logica_acesso.php" method="POST" novalidate>
+        <form action="logica_acesso.php" method="POST" novalidate>
           <input type="hidden" name="acao" value="login">
           <div class="campo">
             <label>CPF</label>
@@ -205,21 +195,30 @@ $tipo = $_GET['tipo'] ?? '';
       <div id="panel-cadastro" class="form-panel">
         <h2 class="form-titulo">Crie seu cadastro</h2>
         <p class="form-descricao">Registre-se para agendar seus serviços.</p>
-        ​<form action="logica_acesso.php" method="POST" novalidate>
-          <input type="hidden" name="acao" value="cadastro">
-          <div class="campo">
-            <label>Nome completo</label>
-            <input type="text" name="nome" placeholder="Seu nome" required>
-          </div>
-          <div class="campo">
-            <label>CPF</label>
-            <input type="text" name="cpf" id="cad-cpf" placeholder="000.000.000-00" required>
-          </div>
-          <div class="campo">
-            <label>Senha</label>
-            <input type="password" name="senha" placeholder="••••••••" required>
-          </div>
-          <button type="submit" class="btn-submit">Criar conta</button>
+        <form action="logica_acesso.php" method="POST" novalidate>
+            <input type="hidden" name="acao" value="cadastro">
+            
+            <div class="campo">
+                <label>Nome completo</label>
+                <input type="text" name="nome" placeholder="Seu nome" required>
+            </div>
+
+            <div class="campo">
+                <label>CPF</label>
+                <input type="text" name="cpf" id="cad-cpf" placeholder="000.000.000-00" required>
+            </div>
+
+            <div class="campo">
+                <label>Telefone</label>
+                <input type="text" name="telefone" id="cad-telefone" placeholder="(00) 00000-0000" maxlength="15" required>
+            </div>
+
+            <div class="campo">
+                <label>Senha</label>
+                <input type="password" name="senha" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="btn-submit">Criar conta</button>
         </form>
         <a class="toggle-link" onclick="toggleForm('login')">Já tem conta? <span>Acesse aqui</span></a>
       </div>
@@ -232,6 +231,7 @@ $tipo = $_GET['tipo'] ?? '';
       document.getElementById('panel-cadastro').classList.toggle('active', form === 'cadastro');
     }
 
+    // MÁSCARA DE CPF
     function mascaraCPF(input) {
       input.addEventListener('input', function () {
         let v = this.value.replace(/\D/g, '').slice(0, 11);
@@ -241,8 +241,34 @@ $tipo = $_GET['tipo'] ?? '';
         this.value = v;
       });
     }
+
+    // MÁSCARA DE TELEFONE (NOVA)
+    function mascaraTelefone(input) {
+      input.addEventListener('input', function () {
+        let v = this.value.replace(/\D/g, ''); // Remove tudo que não é número
+        v = v.slice(0, 11); // Limita a 11 números (DDD + 9 dígitos)
+
+        if (v.length > 10) {
+          // Formato (00) 00000-0000
+          v = v.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+        } else if (v.length > 5) {
+          // Formato (00) 0000-0000
+          v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+        } else if (v.length > 2) {
+          // Formato (00) 0000
+          v = v.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+        } else if (v.length > 0) {
+          // Formato (00
+          v = v.replace(/^(\d{0,2})/, '($1');
+        }
+        this.value = v;
+      });
+    }
+
     mascaraCPF(document.getElementById('login-cpf'));
     mascaraCPF(document.getElementById('cad-cpf'));
+    mascaraTelefone(document.getElementById('cad-telefone'));
   </script>
+
 </body>
 </html>

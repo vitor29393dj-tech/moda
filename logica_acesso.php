@@ -15,10 +15,14 @@ $acao = $_POST['acao'] ?? '';
 if ($acao === 'cadastro') {
     $nome = $_POST['nome'];
     $cpf = $_POST['cpf'];
-    $cpf = preg_replace('/\D/', '', $cpf); // Remove pontos e traços
+    $cpf = preg_replace('/\D/', '', $cpf); // Remove pontos e traços do CPF
     $senha = $_POST['senha'];
+    
+    // 1. CAPTURAR O TELEFONE (recebe o que o usuário digitou com a máscara)
+    $telefone = $_POST['telefone'] ?? '';
 
-    if (empty($nome) || empty($cpf) || empty($senha)) {
+    // 2. VALIDAR (adicionamos o $telefone na checagem de campos vazios)
+    if (empty($nome) || empty($cpf) || empty($senha) || empty($telefone)) {
         header('Location: acesso.php?msg=campos_obrigatorios&tipo=erro');
         exit;
     }
@@ -26,12 +30,21 @@ if ($acao === 'cadastro') {
     $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
 
     try {
-        $sql = "INSERT INTO clientes (nome, cpf, senha) VALUES (:nome, :cpf, :senha)";
+        // 3. ATUALIZAR A SQL (incluindo a coluna 'telefone' e o placeholder ':telefone')
+        $sql = "INSERT INTO clientes (nome, cpf, senha, telefone) VALUES (:nome, :cpf, :senha, :telefone)";
         $stmt = $pdo->prepare($sql);
-        $stmt->execute(['nome' => $nome, 'cpf' => $cpf, 'senha' => $senhaHash]);
+        
+        // EXECUTAR (passando o valor do telefone para o banco)
+        $stmt->execute([
+            'nome'     => $nome, 
+            'cpf'      => $cpf, 
+            'senha'    => $senhaHash,
+            'telefone' => $telefone 
+        ]);
         
         header('Location: acesso.php?msg=cadastro_ok&tipo=sucesso');
     } catch (PDOException $e) {
+        // Caso queira ver o erro real se algo falhar, mude para: die($e->getMessage());
         header('Location: acesso.php?msg=cpf_existente&tipo=erro');
     }
     exit;

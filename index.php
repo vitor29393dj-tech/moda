@@ -4,6 +4,7 @@
 <html lang="pt-BR">
 
 <head>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Atelier — Catálogo & Agendamentos</title>
@@ -17,6 +18,7 @@
    Estética: editorial de moda minimalista / luxo refinado
    Paleta: off-white creme · grafite · dourado discreto · blush
    ============================================================ */
+
     :root {
       --cream: #F7F3EE;
       --warm-white: #FDFAF7;
@@ -995,6 +997,17 @@
       font-size: .82rem;
       color: var(--gold);
     }
+
+    /* ESTILOS DO CARROSSEL (Cole aqui no final) */
+    .swiper-pagination-bullet-active {
+      background: #b8960c !important; /* Cor dourada da bolinha ativa */
+    }
+    .swiper {
+      width: 100%;
+      height: auto;
+      border-radius: 8px; /* Deixa as pontas das fotos arredondadas */
+    }
+
   </style>
 </head>
 
@@ -1026,20 +1039,37 @@
     </div>
   </header>
 
-  <!-- ============================================================
-     HERO (visível apenas no catálogo)
-     ============================================================ -->
   <div id="hero" class="hero">
-    <div class="hero-inner">
+  <div class="hero-inner" style="display: flex; align-items: center; justify-content: space-between; gap: 40px; flex-wrap: wrap;">
+    
+    <div class="hero-texto" style="flex: 1; min-width: 300px;">
       <p class="section-label">Coleção Atual</p>
       <h1>Estilo que<br /><em>conta histórias</em></h1>
-      <p>Explore nosso catálogo exclusivo e agende sua visita para experimentar cada peça com toda a atenção que você
-        merece.</p>
+      <p>Explore nosso catálogo exclusivo e agende sua visita para experimentar cada peça com toda a atenção que você merece.</p>
       <button class="btn-primary" onclick="showPage('agendamento')">
         Agendar Visita
       </button>
     </div>
+
+   <div class="hero-carrossel" style="flex: 1; min-width: 300px; width: 100%; max-width: 500px;">
+  <div class="swiper mySwiper">
+    <div class="swiper-wrapper">
+      <div class="swiper-slide">
+        <img src="img/banner1.webp" alt="Destaque 1" style="width:100%; border-radius: 8px;">
+      </div>
+      <div class="swiper-slide">
+        <img src="img/banner2.jpg" alt="Destaque 2" style="width:100%; border-radius: 8px;">
+      </div>
+      <div class="swiper-slide">
+        <img src="img/banner3.webp" alt="Destaque 3" style="width:100%; border-radius: 8px;">
+      </div>
+    </div>
+    <div class="swiper-pagination"></div>
   </div>
+</div>
+
+  </div>
+</div>
 
   <!-- ============================================================
      PAGE: CATÁLOGO
@@ -1346,7 +1376,7 @@
     <div class="card" onclick="abrirModal(${r.id})">
       <div class="card-img-wrap">
         <img class="card-img"
-             src="${r.imagem_url || 'https://placehold.co/400x533/F7F3EE/B8965A?text=Sem+Foto'}"
+             src="img/${r.imagem_url || 'https://placehold.co/400x533/F7F3EE/B8965A?text=Sem+Foto'}"
              alt="${r.nome}" loading="lazy"/>
         ${r.categoria ? `<div class="card-badge">${r.categoria}</div>` : ''}
       </div>
@@ -1392,7 +1422,7 @@
     function abrirModal(id) {
       const r = state.roupas.find(x => x.id == id);
       if (!r) return;
-      document.getElementById('modalImg').src = r.imagem_url || '';
+      document.getElementById('modalImg').src = 'img/'+ r.imagem_url || '';
       document.getElementById('modalImg').alt = r.nome;
       document.getElementById('modalCat').textContent = r.categoria || '';
       document.getElementById('modalNome').textContent = r.nome;
@@ -1587,7 +1617,7 @@
       sel.innerHTML = state.roupas.map(r => `
     <div class="roupa-option ${state.agendamento.roupa_id == r.id ? 'selected' : ''}"
          id="ro-${r.id}" onclick="selecionarRoupa(${JSON.stringify(r).replace(/"/g, '&quot;')})">
-      <img src="${r.imagem_url || 'https://placehold.co/300x300/F7F3EE/B8965A?text=+'}"
+      <img src="img/${r.imagem_url || 'https://placehold.co/300x300/F7F3EE/B8965A?text=+'}"
            alt="${r.nome}" loading="lazy"/>
       <div class="ro-name">${r.nome}</div>
     </div>
@@ -1832,6 +1862,23 @@ async function finalizarAgendamentoManual() {
        ============================================================ */
     carregarCatalogo();
   </script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+  <script>
+    var swiper = new Swiper(".mySwiper", {
+      loop: true,
+      autoplay: { 
+        delay: 3000,
+        disableOnInteraction: false,
+      },
+      pagination: { 
+        el: ".swiper-pagination", 
+        clickable: true 
+      },
+    });
+  </script>
+
 </body>
 
 </html>
