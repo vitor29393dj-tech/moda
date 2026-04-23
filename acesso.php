@@ -177,7 +177,7 @@ $tipo = $_GET['tipo'] ?? '';
       <div id="panel-login" class="form-panel active">
         <h2 class="form-titulo">Acesse sua conta</h2>
         <p class="form-descricao">Entre para ver seus agendamentos.</p>
-        <form action="logica_acesso.php" method="POST" novalidate>
+        <form action="controllers/AuthController.php" method="POST" novalidate>
           <input type="hidden" name="acao" value="login">
           <div class="campo">
             <label>CPF</label>
@@ -195,7 +195,7 @@ $tipo = $_GET['tipo'] ?? '';
       <div id="panel-cadastro" class="form-panel">
         <h2 class="form-titulo">Crie seu cadastro</h2>
         <p class="form-descricao">Registre-se para agendar seus serviços.</p>
-        <form action="logica_acesso.php" method="POST" novalidate>
+        <form action="controllers/AuthController.php" method="POST" novalidate>
             <input type="hidden" name="acao" value="cadastro">
             
             <div class="campo">

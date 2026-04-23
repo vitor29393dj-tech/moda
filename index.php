@@ -1008,6 +1008,117 @@
       border-radius: 8px; /* Deixa as pontas das fotos arredondadas */
     }
 
+    /* Estilos para o Modal de Login e Cadastro */
+#modalLoginOverlay {
+    display: none; /* Mantém escondido até clicar no botão */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85); /* Fundo escuro semi-transparente */
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px); /* Efeito de desfoque no fundo */
+}
+
+#modalLoginOverlay.open {
+    display: flex; /* Mostra o modal */
+}
+
+.login-card {
+    background: #111; /* Fundo preto elegante */
+    padding: 30px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    border: 1px solid #c5a059; /* Borda dourada do Atelier */
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.gold-title {
+    color: #c5a059;
+    font-family: 'Playfair Display', serif;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.subtitle {
+    color: #ccc;
+    text-align: center;
+    font-size: 0.9rem;
+    margin-bottom: 25px;
+}
+
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: block;
+    color: #c5a059;
+    font-size: 0.8rem;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 12px;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 5px;
+    color: white;
+    outline: none;
+}
+
+.input-group input:focus {
+    border-color: #c5a059;
+}
+
+.btn-gold {
+    background: #c5a059;
+    color: #000;
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: 0.3s;
+}
+
+.btn-gold:hover {
+    background: #e2ba73;
+}
+
+.switch-text {
+    color: #888;
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.85rem;
+}
+
+.switch-text a {
+    color: #c5a059;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.modal-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 24px;
+    cursor: pointer;
+}
+
   </style>
 </head>
 
@@ -1016,61 +1127,77 @@
   <!-- ============================================================
      HEADER
      ============================================================ -->
-  <header>
-    <div class="nav-inner">
-      <a href="#" class="logo">AT<span>EL</span>IER</a>
-      <nav>
-        <button class="nav-btn active" onclick="showPage('catalogo')">
-          <span>Catálogo</span>
-        </button>
-        <button class="nav-btn" onclick="showPage('cadastro')">
-          <span>Cadastro</span>
-        </button>
+<header>
+  <div class="nav-inner">
+    <a href="#" class="logo">AT<span>EL</span>IER</a>
+    <nav>
+      <button class="nav-btn active" onclick="showPage('catalogo')">
+        <span>Catálogo</span>
+      </button>
+
+      <?php if(isset($_SESSION['usuario_id'])): ?>
+    <button class="nav-btn" id="btnPerfil">
+        <span>OLÁ, <?php echo strtoupper($_SESSION['usuario_nome']); ?></span>
+    </button>
+    
         <button class="nav-btn" onclick="showPage('agendamento')">
           <span>Agendamento</span>
         </button>
         
-        <?php if(isset($_SESSION['logado'])): ?>
-          <button class="nav-btn" onclick="window.location.href='logout.php'" style="color: #ff4d4d; border-left: 1px solid #ddd; margin-left: 10px;">
-            <span>Sair</span>
-          </button>
-        <?php endif; ?>
-      </nav>
-    </div>
-  </header>
+        <button class="nav-btn" onclick="confirmarSair()" style="color: #ff4d4d; border-left: 1px solid #ddd; margin-left: 10px;">
+          <span>Sair</span>
+        </button>
 
-  <div id="hero" class="hero">
+      <?php else: ?>
+        <button class="nav-btn" onclick="abrirModalLogin()" id="btnPerfil">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 5px;">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <span>Entrar</span>
+        </button>
+      <?php endif; ?>
+    </nav>
+  </div>
+</header>
+
+<div id="hero" class="hero">
   <div class="hero-inner" style="display: flex; align-items: center; justify-content: space-between; gap: 40px; flex-wrap: wrap;">
     
     <div class="hero-texto" style="flex: 1; min-width: 300px;">
       <p class="section-label">Coleção Atual</p>
       <h1>Estilo que<br /><em>conta histórias</em></h1>
       <p>Explore nosso catálogo exclusivo e agende sua visita para experimentar cada peça com toda a atenção que você merece.</p>
-      <button class="btn-primary" onclick="showPage('agendamento')">
-        Agendar Visita
-      </button>
+      
+      <?php if(isset($_SESSION['usuario_id'])): ?>
+        <button class="btn-primary" onclick="showPage('agendamento')">
+          Agendar Visita
+        </button>
+      <?php else: ?>
+        <button class="btn-primary" onclick="abrirModalLogin()">
+          Faça Login para Agendar
+        </button>
+      <?php endif; ?>
     </div>
 
    <div class="hero-carrossel" style="flex: 1; min-width: 300px; width: 100%; max-width: 500px;">
-  <div class="swiper mySwiper">
-    <div class="swiper-wrapper">
-      <div class="swiper-slide">
-        <img src="img/banner1.webp" alt="Destaque 1" style="width:100%; border-radius: 8px;">
-      </div>
-      <div class="swiper-slide">
-        <img src="img/banner2.jpg" alt="Destaque 2" style="width:100%; border-radius: 8px;">
-      </div>
-      <div class="swiper-slide">
-        <img src="img/banner3.webp" alt="Destaque 3" style="width:100%; border-radius: 8px;">
+      <div class="swiper mySwiper">
+        <div class="swiper-wrapper">
+          <div class="swiper-slide">
+            <img src="img/banner1.webp" alt="Destaque 1" style="width:100%; border-radius: 8px;">
+          </div>
+          <div class="swiper-slide">
+            <img src="img/banner2.jpg" alt="Destaque 2" style="width:100%; border-radius: 8px;">
+          </div>
+          <div class="swiper-slide">
+            <img src="img/banner3.webp" alt="Destaque 3" style="width:100%; border-radius: 8px;">
+          </div>
+        </div>
+        <div class="swiper-pagination"></div>
       </div>
     </div>
-    <div class="swiper-pagination"></div>
   </div>
 </div>
-
-  </div>
-</div>
-
   <!-- ============================================================
      PAGE: CATÁLOGO
      ============================================================ -->
@@ -1640,7 +1767,7 @@
       const prev = document.getElementById('roupaPreview');
       prev.style.display = 'flex';
       prev.innerHTML = `
-    <img src="${r.imagem_url || ''}" alt="${r.nome}"/>
+    <img src="img/${r.imagem_url || ''}" alt="${r.nome}"/>
     <div class="srp-info">
       <div class="srp-name">${r.nome}</div>
       ${r.preco ? `<div class="srp-price">R$ ${parseFloat(r.preco).toFixed(2).replace('.', ',')}</div>` : ''}
@@ -1861,6 +1988,43 @@ async function finalizarAgendamentoManual() {
        INIT
        ============================================================ */
     carregarCatalogo();
+
+    // Função para abrir o modal de login
+function abrirModalLogin() {
+    const modal = document.getElementById('modalLoginOverlay');
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden'; // Impede o scroll do fundo
+}
+
+// Função para fechar o modal
+function fecharModalLogin(e) {
+    // Fecha se clicar no X ou fora do card branco
+    if (!e || e.target.id === 'modalLoginOverlay' || e.target.className === 'modal-close') {
+        document.getElementById('modalLoginOverlay').classList.remove('open');
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Troca a visualização para o formulário de Cadastro
+function alternarParaCadastro() {
+    document.getElementById('areaLogin').style.display = 'none';
+    document.getElementById('areaCadastro').style.display = 'block';
+}
+
+// Troca a visualização para o formulário de Login
+function alternarParaLogin() {
+    document.getElementById('areaCadastro').style.display = 'none';
+    document.getElementById('areaLogin').style.display = 'block';
+}
+
+function confirmarSair() {
+    // Abre uma janelinha de confirmação no navegador
+    if (confirm("Tem certeza que deseja sair?")) {
+        // Se clicar em OK, ele redireciona para o arquivo que mata a sessão
+        window.location.href = "logout.php";
+    }
+}
+
   </script>
   
   <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
@@ -1878,6 +2042,58 @@ async function finalizarAgendamentoManual() {
       },
     });
   </script>
+
+  <div id="modalLoginOverlay" class="modal-overlay" onclick="fecharModalLogin(event)">
+    <div class="modal-content login-card">
+        <button class="modal-close" onclick="fecharModalLogin()">×</button>
+        
+        <div id="areaLogin">
+            <h2 class="gold-title">Bem-vindo</h2>
+            <p class="subtitle">Acesse sua conta para agendar serviços.</p>
+            
+            <form id="formLogin" action="controllers/AuthController.php" method="POST">
+              <div class="input-group">
+                  <label>CPF</label>
+                  <input type="text" name="cpf" id="loginCpf" placeholder="000.000.000-00" required>
+              </div>
+              <div class="input-group">
+                  <label>SENHA</label>
+                  <input type="password" name="senha" id="loginSenha" placeholder="********" required>
+              </div>
+              <button type="submit" class="btn-gold">ENTRAR</button>
+            </form>
+            
+            <p class="switch-text">Não tem conta? <a href="javascript:void(0)" onclick="alternarParaCadastro()">Cadastre-se agora</a></p>
+        </div>
+
+        <div id="areaCadastro" style="display: none;">
+            <h2 class="gold-title">Crie seu cadastro</h2>
+            <p class="subtitle">Registre-se para agendar seus serviços.</p>
+            
+            <form id="formCadastro">
+                <div class="input-group">
+                    <label>NOME COMPLETO</label>
+                    <input type="text" placeholder="Seu nome" required>
+                </div>
+                <div class="input-group">
+                    <label>CPF</label>
+                    <input type="text" placeholder="000.000.000-00" required>
+                </div>
+                <div class="input-group">
+                    <label>TELEFONE</label>
+                    <input type="text" placeholder="(00) 00000-0000" required>
+                </div>
+                <div class="input-group">
+                    <label>SENHA</label>
+                    <input type="password" placeholder="********" required>
+                </div>
+                <button type="submit" class="btn-gold">CRIAR CONTA</button>
+            </form>
+            
+            <p class="switch-text">Já tem conta? <a href="javascript:void(0)" onclick="alternarParaLogin()">Fazer Login</a></p>
+        </div>
+    </div>
+</div>
 
 </body>
 

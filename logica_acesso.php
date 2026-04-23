@@ -1,5 +1,8 @@
 <?php
-session_start();
+// 1. Inicia a sessão IMEDIATAMENTE como primeira ação do arquivo
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Conexão com o banco
 try {
@@ -15,13 +18,10 @@ $acao = $_POST['acao'] ?? '';
 if ($acao === 'cadastro') {
     $nome = $_POST['nome'];
     $cpf = $_POST['cpf'];
-    $cpf = preg_replace('/\D/', '', $cpf); // Remove pontos e traços do CPF
+    $cpf = preg_replace('/\D/', '', $cpf); 
     $senha = $_POST['senha'];
-    
-    // 1. CAPTURAR O TELEFONE (recebe o que o usuário digitou com a máscara)
     $telefone = $_POST['telefone'] ?? '';
 
-    // 2. VALIDAR (adicionamos o $telefone na checagem de campos vazios)
     if (empty($nome) || empty($cpf) || empty($senha) || empty($telefone)) {
         header('Location: acesso.php?msg=campos_obrigatorios&tipo=erro');
         exit;
@@ -30,11 +30,9 @@ if ($acao === 'cadastro') {
     $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
 
     try {
-        // 3. ATUALIZAR A SQL (incluindo a coluna 'telefone' e o placeholder ':telefone')
         $sql = "INSERT INTO clientes (nome, cpf, senha, telefone) VALUES (:nome, :cpf, :senha, :telefone)";
         $stmt = $pdo->prepare($sql);
         
-        // EXECUTAR (passando o valor do telefone para o banco)
         $stmt->execute([
             'nome'     => $nome, 
             'cpf'      => $cpf, 
@@ -43,17 +41,17 @@ if ($acao === 'cadastro') {
         ]);
         
         header('Location: acesso.php?msg=cadastro_ok&tipo=sucesso');
+        exit; // Garante parada após cadastro
     } catch (PDOException $e) {
-        // Caso queira ver o erro real se algo falhar, mude para: die($e->getMessage());
         header('Location: acesso.php?msg=cpf_existente&tipo=erro');
+        exit;
     }
-    exit;
 }
 
 // --- PARTE 2: LOGIN ---
 if ($acao === 'login') {
     $cpf = $_POST['cpf'];
-    $cpf = preg_replace('/\D/', '', $cpf); // Limpa o CPF para a busca no banco
+    $cpf = preg_replace('/\D/', '', $cpf); 
     $senha = $_POST['senha'];
 
     $sql = "SELECT * FROM clientes WHERE cpf = :cpf";
@@ -62,25 +60,23 @@ if ($acao === 'login') {
     $user = $stmt->fetch();
 
     if ($user && password_verify($senha, $user['senha'])) {
-        // Guarda os dados na sessão
-        $_SESSION['logado'] = true;
-        $_SESSION['usuario_id'] = $user['id'];
+        // SALVANDO DADOS NA SESSÃO (A maleta que o index.php vai ler)
+        $_SESSION['usuario_id']   = $user['id'];
         $_SESSION['usuario_nome'] = $user['nome'];
-        $_SESSION['usuario_cpf'] = $user['cpf'];
+        $_SESSION['usuario_cpf']  = $user['cpf'];
 
-        // Seu CPF de Administrador
         $seuCpfAdmin = '71590928563'; 
 
-        // REDIRECIONAMENTO INTELIGENTE
         if ($cpf === $seuCpfAdmin) { 
-            // Se for você, vai para o painel administrativo
             header('Location: admin/dashboard.php');
+            exit; 
         } else {
-            // Se for cliente (como o teste 6), volta para a HOME personalizada
+            // Redireciona para a home e PARA o script para salvar a sessão
             header('Location: index.php');
+            exit; 
         }
     } else {
         header('Location: acesso.php?msg=login_invalido&tipo=erro');
+        exit;
     }
-    exit;
 }
