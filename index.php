@@ -1402,7 +1402,7 @@
           <p id="modalDesc" class="modal-desc"></p>
           <div id="modalPreco" class="modal-price"></div>
           <button class="btn-primary" id="modalBtnAgendar" style="width:100%;justify-content:center;">
-            Agendar Esta Peça
+            FAÇA LOGIN / CADASTRO PARA AGENDAR
           </button>
         </div>
       </div>
@@ -1567,16 +1567,34 @@
       document.body.style.overflow = '';
     }
 
-    /* ============================================================
-       CATÁLOGO → AGENDAMENTO atalho
-       ============================================================ */
-    function agendarRoupa(id) {
-      const r = state.roupas.find(x => x.id == id);
-      if (!r) return;
-      selecionarRoupa(r);
-      showPage('agendamento');
-      irStep(1);
+   /* ============================================================
+   CATÁLOGO → AGENDAMENTO atalho (AJUSTADO PARA LOGIN)
+   ============================================================ */
+function agendarRoupa(id) {
+    // 1. Salva a peça selecionada
+    const r = state.roupas.find(x => x.id == id);
+    if (r) {
+        state.agendamento.roupa_id = r.id;
+        state.agendamento.roupa = r;
     }
+
+    if (USUARIO_LOGADO) {
+        // SE LOGADO: Vai para a página de agendamento no Step 2 (Data)
+        showPage('agendamento');
+        irStep(2); 
+        
+        // Preenche os dados do usuário automaticamente no Step 3
+        if (DADOS_USUARIO) {
+            document.querySelector('input[name="nome"]').value = DADOS_USUARIO.nome;
+            document.querySelector('input[name="cpf"]').value = DADOS_USUARIO.cpf;
+            document.querySelector('input[name="telefone"]').value = DADOS_USUARIO.telefone;
+        }
+    } else {
+        // SE NÃO LOGADO: Abre o modal de login
+        const modal = document.getElementById('modalLoginOverlay');
+        if (modal) modal.style.display = 'flex';
+    }
+}
 
     /* ============================================================
        CADASTRO DE CLIENTE
@@ -1739,27 +1757,62 @@
   if (n === 3) preencherDadosCliente();
 }
 
-    function renderizarRoupasNoAgendamento() {
-      const sel = document.getElementById('roupaSelector');
-      sel.innerHTML = state.roupas.map(r => `
-    <div class="roupa-option ${state.agendamento.roupa_id == r.id ? 'selected' : ''}"
-         id="ro-${r.id}" onclick="selecionarRoupa(${JSON.stringify(r).replace(/"/g, '&quot;')})">
-      <img src="img/${r.imagem_url || 'https://placehold.co/300x300/F7F3EE/B8965A?text=+'}"
-           alt="${r.nome}" loading="lazy"/>
-      <div class="ro-name">${r.nome}</div>
-    </div>
-  `).join('');
+  function renderizarRoupasNoAgendamento() {
+    const sel = document.getElementById('roupaSelector');
+    if (!sel) return;
+
+    // Essa linha pergunta ao PHP se existe um usuário logado
+    const usuarioLogado = <?php echo isset($_SESSION['usuario_id']) ? 'true' : 'false'; ?>;
+
+    sel.innerHTML = state.roupas.map(r => {
+        // Se estiver logado, o botão vira "Agendar Agora". Se não, continua "Identifique-se"
+        const textoBotao = usuarioLogado ? "Agendar Agora" : "Identifique-se para Agendar";
+        
+        return `
+            <div class="roupa-option ${state.agendamento.roupa_id == r.id ? 'selected' : ''}" id="ro-${r.id}">
+              
+              <img src="img/${r.imagem_url || 'https://placehold.co/300x300/F7F3EE/B8965A?text=+'}"
+                   alt="${r.nome}" loading="lazy"/>
+              
+              <div class="ro-name">${r.nome}</div>
+
+              <button type="button" class="btn-card-login" 
+                      onclick="agendarRoupa(${r.id})"
+                      style="width:100%; margin-top:10px; padding:8px; background:var(--gold); color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:0.75rem; text-transform:uppercase;">
+                  ${textoBotao}
+              </button>
+
+            </div>
+        `;
+    }).join('');
+}
+   function selecionarRoupa(r) {
+    // 1. Identifica a roupa
+    const roupa = typeof r === 'number' ? state.roupas.find(x => x.id == r) : r;
+    if (!roupa) return;
+
+    // 2. Guarda a roupa no estado
+    state.agendamento.roupa_id = roupa.id;
+    state.agendamento.roupa = roupa;
+
+    // 3. Marca visualmente o card
+    document.querySelectorAll('.roupa-option').forEach(el => el.classList.remove('selected'));
+    document.getElementById('ro-' + roupa.id)?.classList.add('selected');
+
+    // --- NOVA LÓGICA PARA ABRIR O MODAL ---
+    const modal = document.getElementById('modalAgendamento');
+    if (modal) {
+        modal.style.display = 'block'; // Isso faz a janela aparecer na tela
     }
 
-    function selecionarRoupa(r) {
-      const roupa = typeof r === 'number' ? state.roupas.find(x => x.id == r) : r;
-      if (!roupa) return;
-      state.agendamento.roupa_id = roupa.id;
-      state.agendamento.roupa = roupa;
-      document.querySelectorAll('.roupa-option').forEach(el => el.classList.remove('selected'));
-      document.getElementById('ro-' + roupa.id)?.classList.add('selected');
-      document.getElementById('btnStep1Next').disabled = false;
+    // 4. Pula para o Passo 3 (Identificação)
+    irStep(3); 
+    
+    // 5. Atualiza o resumo da roupa no modal (para o usuário ver o que escolheu)
+    if (typeof atualizarPreviewRoupa === 'function') {
+        atualizarPreviewRoupa();
     }
+}
 
     function atualizarPreviewRoupa() {
       const r = state.agendamento.roupa;
@@ -1777,13 +1830,16 @@
     }
 
     function gerarSlots() {
-      const slots = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
-      const cont = document.getElementById('timeSlots');
-      cont.innerHTML = slots.map(h => `
+  const slots = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+  const cont = document.getElementById('timeSlots');
+  
+  cont.innerHTML = slots.map(h => `
     <div class="time-slot ${state.agendamento.horario === h ? 'selected' : ''}"
-         onclick="selecionarHorario(this,'${h}')">${h}</div>
+         onclick="selecionarHorario(this, '${h}')">
+      ${h}
+    </div>
   `).join('');
-    }
+}
 
     // Data mínima = hoje
     document.getElementById('dataAg').min = new Date().toISOString().split('T')[0];
@@ -1794,59 +1850,94 @@
       document.getElementById('btnStep2Next').disabled = true;
     });
 
-    function selecionarHorario(el, h) {
-      if (!state.agendamento.data) { toast('Escolha uma data primeiro.', 'info'); return; }
-      document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
-      el.classList.add('selected');
-      state.agendamento.horario = h;
-      document.getElementById('btnStep2Next').disabled = false;
+   async function selecionarHorario(elemento, horario) {
+    // AJUSTADO: Agora busca pelo ID correto 'dataAg' que você usa no seu código
+    const campoData = document.getElementById('dataAg');
+    const dataSelecionada = campoData ? campoData.value : '';
+
+    if (!dataSelecionada) {
+        toast('Por favor, selecione uma data primeiro.', 'error');
+        return;
     }
 
-   
-    /* ============================================================
-       STEP 3 — Dados do cliente (BUSCA DINÂMICA)
-       ============================================================ */
-    document.getElementById('agCpf').addEventListener('input', async function () {
-      aplicarMascaraCpf(this);
-      const c = this.value.replace(/\D/g, '');
-      
-      if (c.length === 11) {
-        if (validarCpfJS(c)) {
-          document.getElementById('erroAgCpf').classList.remove('show');
-          
-          // --- AQUI ENTRA A MÁGICA ---
-          try {
-            const response = await fetch(`controllers/ClienteController.php?action=buscar&cpf=${c}`);
-            const dados = await response.json();
+    try {
+        // Feedback visual de carregamento
+        elemento.style.opacity = '0.5';
 
-            if (dados.success && dados.cliente) {
-              // Preenche os campos com o que veio do banco
-              document.getElementById('agNome').value = dados.cliente.nome;
-              document.getElementById('agTel').value = dados.cliente.telefone;
-              
-              // Guarda o ID real no campo escondido (Adeus ID "5" fixo!)
-              document.getElementById('cliente_id').value = dados.cliente.id;
-              
-              toast('Bem-vindo de volta! Seus dados foram preenchidos.', 'success');
-            } else {
-              // Se não achar no banco, limpa para novo cadastro
-              document.getElementById('agNome').value = '';
-              document.getElementById('agTel').value = '';
-              document.getElementById('cliente_id').value = '';
-            }
-          } catch (e) {
-            console.error("Erro ao buscar cliente:", e);
-          }
-          // ---------------------------
+        // Consulta o servidor (Certifique-se que o AgendamentoController tem a action verificar_disponibilidade)
+        const res = await fetch(`controllers/AgendamentoController.php?action=verificar_disponibilidade&data=${dataSelecionada}&horario=${horario}`);
+        const resultado = await res.json();
 
-          document.getElementById('dadosClienteExtra').style.display = 'block';
-        } else {
-          document.getElementById('erroAgCpf').classList.add('show');
+        elemento.style.opacity = '1';
+
+        if (!resultado.disponivel) {
+            toast('Desculpe, este horário já está ocupado. Por favor, escolha outro.', 'error');
+            return; 
         }
-      } else {
+
+        // Se estiver livre, marca o botão como selecionado
+        document.querySelectorAll('.time-slot').forEach(el => el.classList.remove('selected'));
+        elemento.classList.add('selected');
+        
+        // Atualiza o estado global para que o passo 3 funcione
+        state.agendamento.horario = horario;
+        state.agendamento.data = dataSelecionada; // Sincroniza com a validação do irStep
+
+        // Habilita o botão de "Próximo"
+        document.getElementById('btnStep2Next').disabled = false;
+
+    } catch (error) {
+        elemento.style.opacity = '1';
+        console.error('Erro ao verificar disponibilidade:', error);
+        toast('Erro ao verificar horário. Tente novamente.', 'error');
+    }
+}
+   
+   /* ============================================================
+   STEP 3 — Dados do cliente (BUSCA DINÂMICA)
+   ============================================================ */
+document.getElementById('agCpf').addEventListener('input', async function () {
+    aplicarMascaraCpf(this);
+    const c = this.value.replace(/\D/g, '');
+
+    if (c.length === 11) {
+        if (validarCpfJS(c)) {
+            document.getElementById('erroAgCpf').classList.remove('show');
+
+            try {
+                const response = await fetch(`controllers/ClienteController.php?action=buscar&cpf=${c}`);
+                const dados = await response.json();
+
+                if (dados.success && dados.cliente) {
+                    document.getElementById('agNome').value = dados.cliente.nome;
+                    document.getElementById('agTel').value = dados.cliente.telefone;
+                    document.getElementById('cliente_id').value = dados.cliente.id;
+                    toast('Bem-vindo de volta! Seus dados foram preenchidos.', 'success');
+                } else {
+                    document.getElementById('agNome').value = '';
+                    document.getElementById('agTel').value = '';
+                    document.getElementById('cliente_id').value = '';
+                }
+            } catch (e) {
+                console.error("Erro ao buscar cliente:", e);
+            }
+
+            // --- AQUI É O LUGAR CERTO DA GARANTIA ---
+            const container = document.getElementById('dadosClienteExtra');
+            container.style.display = 'block'; // Mostra o bloco
+            container.style.visibility = 'visible';
+            container.style.height = 'auto';
+            container.style.opacity = '1';
+            // ---------------------------------------
+
+        } else {
+            // Agora o 'else' está colado no 'if (validarCpfJS)' corretamente
+            document.getElementById('erroAgCpf').classList.add('show');
+        }
+    } else {
         document.getElementById('erroAgCpf').classList.remove('show');
-      }
-    });
+    }
+});
     /* ============================================================
        FINALIZAR AGENDAMENTO
        ============================================================ */
@@ -1915,10 +2006,10 @@ async function finalizarAgendamentoManual() {
   btn.disabled = true;
   btn.innerHTML = 'Confirmando...';
 
-  // Mudamos aqui: enviamos o formData direto, sem converter para JSON
+  // Enviamos o formData direto para o Controller
   const res = await fetch('controllers/AgendamentoController.php?action=agendar', {
     method: 'POST',
-    body: formData // O PHP entende isso melhor
+    body: formData 
   });
 
   const data = await res.json();
@@ -1926,7 +2017,13 @@ async function finalizarAgendamentoManual() {
   if (res.ok && data.success) {
     exibirConfirmacao(data.agendamento, { nome: formData.get('nome') });
   } else {
-    toast(data.error || 'Erro ao agendar', 'error');
+    // --- MUDANÇA PARA EXIBIR O ERRO DO PHP ---
+    // O Controller envia os erros dentro de uma array 'erros'
+    const mensagemPersonalizada = (data.erros && data.erros.length > 0) ? data.erros[0] : 'Erro ao agendar';
+    
+    toast(mensagemPersonalizada, 'error');
+    // -----------------------------------------
+
     btn.disabled = false;
     btn.textContent = 'Confirmar Agendamento';
   }
@@ -1996,13 +2093,19 @@ function abrirModalLogin() {
     document.body.style.overflow = 'hidden'; // Impede o scroll do fundo
 }
 
-// Função para fechar o modal
 function fecharModalLogin(e) {
-    // Fecha se clicar no X ou fora do card branco
-    if (!e || e.target.id === 'modalLoginOverlay' || e.target.className === 'modal-close') {
-        document.getElementById('modalLoginOverlay').classList.remove('open');
-        document.body.style.overflow = 'auto';
+  // Se o clique foi no fundo escuro ou no botão X, ele fecha
+  const modal = document.getElementById('modalLoginOverlay');
+  
+  if (!e || e.target === modal || e.target.classList.contains('modal-close')) {
+    if (modal) {
+      modal.style.display = 'none';
+      // Se você usa classes CSS para abrir/fechar, remova-a também:
+      modal.classList.remove('open');
     }
+    // Devolve o scroll para a página
+    document.body.style.overflow = '';
+  }
 }
 
 // Troca a visualização para o formulário de Cadastro
@@ -2041,6 +2144,7 @@ function confirmarSair() {
         clickable: true 
       },
     });
+    
   </script>
 
   <div id="modalLoginOverlay" class="modal-overlay" onclick="fecharModalLogin(event)">
@@ -2070,25 +2174,27 @@ function confirmarSair() {
             <h2 class="gold-title">Crie seu cadastro</h2>
             <p class="subtitle">Registre-se para agendar seus serviços.</p>
             
-            <form id="formCadastro">
-                <div class="input-group">
-                    <label>NOME COMPLETO</label>
-                    <input type="text" placeholder="Seu nome" required>
-                </div>
-                <div class="input-group">
-                    <label>CPF</label>
-                    <input type="text" placeholder="000.000.000-00" required>
-                </div>
-                <div class="input-group">
-                    <label>TELEFONE</label>
-                    <input type="text" placeholder="(00) 00000-0000" required>
-                </div>
-                <div class="input-group">
-                    <label>SENHA</label>
-                    <input type="password" placeholder="********" required>
-                </div>
-                <button type="submit" class="btn-gold">CRIAR CONTA</button>
-            </form>
+            <form id="formCadastro" action="logica_acesso.php" method="POST">
+    <input type="hidden" name="acao" value="cadastro">
+
+    <div class="input-group">
+        <label>NOME COMPLETO</label>
+        <input type="text" name="nome" placeholder="Seu nome" required>
+    </div>
+    <div class="input-group">
+        <label>CPF</label>
+        <input type="text" name="cpf" id="cad-cpf" placeholder="000.000.000-00" required>
+    </div>
+    <div class="input-group">
+        <label>TELEFONE</label>
+        <input type="text" name="telefone" placeholder="(00) 00000-0000" required>
+    </div>
+    <div class="input-group">
+        <label>SENHA</label>
+        <input type="password" name="senha" placeholder="********" required>
+    </div>
+    <button type="submit" class="btn-gold">CRIAR CONTA</button>
+</form>
             
             <p class="switch-text">Já tem conta? <a href="javascript:void(0)" onclick="alternarParaLogin()">Fazer Login</a></p>
         </div>

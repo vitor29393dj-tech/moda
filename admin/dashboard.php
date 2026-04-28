@@ -1,13 +1,14 @@
 <?php
 session_start();
 
-// 1. SEGURANÇA: Só entra se estiver logado E for o seu CPF de admin
-$seuCpfAdmin = '71590928563'; // O mesmo que você usou na logica_acesso.php
+$seuCpfAdmin = '71590928563';
 
+// Se não estiver logado OU o CPF da sessão for diferente do admin, manda de volta
 if (!isset($_SESSION['logado']) || $_SESSION['usuario_cpf'] !== $seuCpfAdmin) {
-    header('Location: ../acesso.php');
+    header('Location: ../index.php');
     exit;
 }
+// ... resto do seu código do dashboard
 
 $secao = $_GET['secao'] ?? 'agendamentos';
 
@@ -20,7 +21,16 @@ try {
         $sql = "SELECT * FROM clientes WHERE cpf != '$cpfLogado' ORDER BY nome ASC";
         $stmt = $pdo->query($sql);
         $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } else {
+    } 
+    
+    elseif ($secao === 'catalogo') {
+        // Busca todas as peças cadastradas na tabela roupas
+        $sql = "SELECT * FROM roupas ORDER BY nome ASC";
+        $stmt = $pdo->query($sql);
+        $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+    
+    else {
         $sql = "SELECT a.id, a.data_agendamento, a.horario, a.status, c.nome as cliente_nome, r.nome as roupa_nome 
                 FROM agendamentos a
                 JOIN clientes c ON a.cliente_id = c.id
@@ -31,7 +41,10 @@ try {
     }
 } catch (PDOException $e) {
     die("Erro ao conectar ao banco: " . $e->getMessage());
+    
 }
+
+
 ?>
 
 <!DOCTYPE html>
@@ -78,77 +91,117 @@ try {
 <body>
 
     <div class="sidebar">
-        <h2>ATELIER</h2>
-        <a href="dashboard.php" class="<?= $secao == 'agendamentos' ? 'active' : '' ?>">Agendamentos</a>
-        <a href="dashboard.php?secao=clientes" class="<?= $secao == 'clientes' ? 'active' : '' ?>">Clientes</a>
-        <a href="../logout.php">Sair</a>
-    </div>
+    <h2>ATELIER</h2>
+    <a href="dashboard.php" class="<?= ($secao == 'agendamentos') ? 'active' : '' ?>">Agendamentos</a>
+    
+    <a href="dashboard.php?secao=catalogo" class="<?= ($secao == 'catalogo') ? 'active' : '' ?>">Catálogo / Estoque</a>
+    
+    <a href="dashboard.php?secao=clientes" class="<?= ($secao == 'clientes') ? 'active' : '' ?>">Clientes</a>
+    
+    <a href="../logout.php">Sair</a>
+</div>
 
     <div class="main-content">
         <div class="header-dashboard">
-            <h1><?= $secao === 'clientes' ? 'Gestão de Clientes' : 'Controle de Agendamentos' ?></h1>
+            <h1>
+    <?php 
+        if ($secao === 'clientes') echo 'Gestão de Clientes';
+        elseif ($secao === 'catalogo') echo 'Catálogo de Produtos';
+        else echo 'Controle de Agendamentos';
+    ?>
+</h1>
             <a href="../logout.php" class="btn-logout" style="text-decoration: none; font-weight: bold;">Encerrar Sessão</a>
         </div>
 
-        <div class="card-tabela">
-            <table>
-                <?php if ($secao === 'clientes'): ?>
-                    <thead>
-                        <tr>
-                            <th>Nome Completo</th>
-                            <th>CPF Registrado</th>
-                            <th>Telefone</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($dados as $c): ?>
-                        <tr>
-                            <td><?= htmlspecialchars($c['nome']) ?></td>
-                            <td><?= htmlspecialchars($c['cpf']) ?></td>
-                            <td><?= htmlspecialchars($c['telefone'] ?? 'Não informado') ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                <?php else: ?>
-                    <thead>
-                        <tr>
-                            <th>Cliente</th>
-                            <th>Data e Horário</th>
-                            <th>Tipo de Peça</th>
-                            <th style="text-align: center;">Status</th>
-                            <th style="text-align: center;">Gerenciar</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($dados as $a): ?>
-                        <tr>
-                            <td><strong><?= htmlspecialchars($a['cliente_nome']) ?></strong></td>
-                            <td><?= date('d/m/Y', strtotime($a['data_agendamento'])) ?> às <?= substr($a['horario'], 0, 5) ?></td>
-                            <td><?= htmlspecialchars($a['roupa_nome']) ?></td>
-                            
-                            <td style="text-align: center;">
-                                <?php 
-                                    $status_banco = !empty($a['status']) ? $a['status'] : 'PENDENTE';
-                                    $classe_css = strtolower(trim($status_banco));
-                                ?>
-                                <span class="status status-<?= $classe_css ?>">
-                                    <?= htmlspecialchars($status_banco) ?>
-                                </span>
-                            </td>
+      <div class="card-tabela">
+    <table style="width: 100%; border-collapse: collapse;">
+        <?php if ($secao === 'clientes'): ?>
+            <thead>
+                <tr>
+                    <th>Nome Completo</th>
+                    <th>CPF Registrado</th>
+                    <th>Telefone</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($dados as $c): ?>
+                <tr>
+                    <td><?= htmlspecialchars($c['nome']) ?></td>
+                    <td><?= htmlspecialchars($c['cpf']) ?></td>
+                    <td><?= htmlspecialchars($c['telefone'] ?? 'Não informado') ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
 
-                            <td style="text-align: center;">
-                                <a href="acoes_agendamento.php?id=<?= $a['id'] ?>&acao=concluir" 
-                                   class="btn-acao btn-check" onclick="return confirm('Concluir este serviço?')">✓</a>
+        <?php elseif ($secao === 'catalogo'): ?>
+            <thead>
+                <tr>
+                    <th style="width: 80px;">Foto</th>
+                    <th>Peça / Modelo</th>
+                    <th>Categoria</th>
+                    <th style="text-align: center;">Status</th>
+                    <th style="text-align: center;">Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($dados as $r): ?>
+                <tr>
+                    <td>
+                        <img src="../img/<?= htmlspecialchars($r['imagem_url']) ?>" 
+     alt="Foto da peça" 
+     style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #ddd;">
+                    </td>
+                    <td><strong><?= htmlspecialchars($r['nome']) ?></strong></td>
+                    <td><?= htmlspecialchars($r['categoria']) ?></td>
+                    <td style="text-align: center;">
+                        <?php if($r['status_estoque'] === 'disponivel'): ?>
+                            <span class="status status-concluido">Disponível</span>
+                        <?php else: ?>
+                            <span class="status status-pendente">Indisponível</span>
+                        <?php endif; ?>
+                    </td>
+                    <td style="text-align: center;">
+                        <a href="acoes_catalogo.php?id=<?= $r['id'] ?>&acao=toggle" 
+                           class="btn-acao" 
+                           style="background: var(--dourado); width: auto; padding: 5px 12px; border-radius: 4px; font-size: 11px; text-transform: none; line-height: normal; display: inline-block;">
+                            Alterar Disponibilidade
+                        </a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
 
-                                <a href="acoes_agendamento.php?id=<?= $a['id'] ?>&acao=excluir" 
-                                   class="btn-acao btn-del" onclick="return confirm('Excluir permanentemente?')">✕</a>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                <?php endif; ?>
-            </table>
-        </div>
-    </div>
+        <?php else: // Agendamentos (Padrão) ?>
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Data e Horário</th>
+                    <th>Tipo de Peça</th>
+                    <th style="text-align: center;">Status</th>
+                    <th style="text-align: center;">Gerenciar</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($dados as $a): ?>
+                <tr>
+                    <td><strong><?= htmlspecialchars($a['cliente_nome']) ?></strong></td>
+                    <td><?= date('d/m/Y', strtotime($a['data_agendamento'])) ?> às <?= substr($a['horario'], 0, 5) ?></td>
+                    <td><?= htmlspecialchars($a['roupa_nome']) ?></td>
+                    <td style="text-align: center;">
+                        <span class="status status-<?= strtolower(trim($a['status'] ?? 'pendente')) ?>">
+                            <?= htmlspecialchars($a['status'] ?? 'PENDENTE') ?>
+                        </span>
+                    </td>
+                    <td style="text-align: center;">
+                        <a href="acoes_agendamento.php?id=<?= $a['id'] ?>&acao=concluir" class="btn-acao btn-check">✓</a>
+                        <a href="acoes_agendamento.php?id=<?= $a['id'] ?>&acao=excluir" class="btn-acao btn-del">✕</a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        <?php endif; ?>
+    </table>
+</div>
+    
 </body>
 </html>

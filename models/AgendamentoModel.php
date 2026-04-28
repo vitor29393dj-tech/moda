@@ -32,18 +32,23 @@ class AgendamentoModel {
         return (int) $this->db->lastInsertId();
     }
 
-    /** Verifica conflito de horário para a mesma roupa. */
-    public function horarioDisponivel(string $data, string $horario, int $roupa_id): bool {
-        $stmt = $this->db->prepare(
-            "SELECT COUNT(*) FROM agendamentos
-             WHERE data_agendamento = :data
-               AND horario = :horario
-               AND roupa_id = :roupa_id
-               AND status != 'cancelado'"
-        );
-        $stmt->execute([':data' => $data, ':horario' => $horario, ':roupa_id' => $roupa_id]);
-        return $stmt->fetchColumn() == 0;
-    }
+   /** * Verifica se o horário está ocupado por QUALQUER agendamento no atelier.
+ */
+public function horarioDisponivel(string $data, string $horario): bool {
+    $stmt = $this->db->prepare(
+        "SELECT COUNT(*) FROM agendamentos 
+         WHERE data_agendamento = :data 
+           AND horario = :horario 
+           AND status != 'cancelado'"
+    );
+    $stmt->execute([
+        ':data'    => $data, 
+        ':horario' => $horario
+    ]);
+    
+    // Se o contador for 0, o horário está livre
+    return $stmt->fetchColumn() == 0;
+}
 
     /** Busca agendamento com dados completos pelo ID. */
     public function buscarPorId(int $id): array|false {

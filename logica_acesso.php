@@ -23,7 +23,7 @@ if ($acao === 'cadastro') {
     $telefone = $_POST['telefone'] ?? '';
 
     if (empty($nome) || empty($cpf) || empty($senha) || empty($telefone)) {
-        header('Location: acesso.php?msg=campos_obrigatorios&tipo=erro');
+        header('Location: index.php?msg=campos_obrigatorios&tipo=erro');
         exit;
     }
 
@@ -40,10 +40,22 @@ if ($acao === 'cadastro') {
             'telefone' => $telefone 
         ]);
         
-        header('Location: acesso.php?msg=cadastro_ok&tipo=sucesso');
-        exit; // Garante parada após cadastro
+        // --- NOVO REDIRECIONAMENTO ---
+        // Se o CPF cadastrado for o seu de Admin, já loga e manda para o Painel
+        if ($cpf === '71590928563') {
+            $_SESSION['usuario_id'] = $pdo->lastInsertId();
+            $_SESSION['usuario_nome'] = $nome;
+            $_SESSION['logado'] = true;
+            header('Location: admin/dashboard.php');
+        } else {
+            // Se for cliente comum, volta para a index com mensagem de sucesso
+            header('Location: index.php?msg=cadastro_ok&tipo=sucesso');
+        }
+        exit; 
+
     } catch (PDOException $e) {
-        header('Location: acesso.php?msg=cpf_existente&tipo=erro');
+        // Se der erro (como CPF repetido), volta para a index
+        header('Location: index.php?msg=cpf_existente&tipo=erro');
         exit;
     }
 }
@@ -60,23 +72,22 @@ if ($acao === 'login') {
     $user = $stmt->fetch();
 
     if ($user && password_verify($senha, $user['senha'])) {
-        // SALVANDO DADOS NA SESSÃO (A maleta que o index.php vai ler)
+        // SALVANDO DADOS NA SESSÃO
         $_SESSION['usuario_id']   = $user['id'];
         $_SESSION['usuario_nome'] = $user['nome'];
-        $_SESSION['usuario_cpf']  = $user['cpf'];
+        $_SESSION['usuario_cpf']  = $user['cpf']; // ESSENCIAL PARA O DASHBOARD
+        $_SESSION['logado']       = true;
 
         $seuCpfAdmin = '71590928563'; 
 
-        if ($cpf === $seuCpfAdmin) { 
+        if ($cpf === $seuCpfAdmin) {
             header('Location: admin/dashboard.php');
-            exit; 
         } else {
-            // Redireciona para a home e PARA o script para salvar a sessão
-            header('Location: index.php');
-            exit; 
+            header('Location: index.php'); // Mudado de agendamento.php para index.php
         }
+        exit;
     } else {
-        header('Location: acesso.php?msg=login_invalido&tipo=erro');
+        echo "<script>alert('CPF ou Senha incorretos!'); window.location.href='index.php';</script>";
         exit;
     }
 }
