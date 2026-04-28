@@ -1,11 +1,15 @@
 <?php
 session_start();
-// Segurança: Só processa se estiver logado
-if (!isset($_SESSION['logado'])) exit;
+require_once '../config/database.php';
+
+// Segurança: Apenas admin acessa
+$seuCpfAdmin = '71590928563';
+if (!isset($_SESSION['logado']) || $_SESSION['usuario_cpf'] !== $seuCpfAdmin) {
+    exit('Acesso negado');
+}
 
 try {
-    $pdo = new PDO("mysql:host=localhost;dbname=moda", "root", "");
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = Database::getInstance()->getConnection();
 
     $id = $_GET['id'] ?? null;
     $acao = $_GET['acao'] ?? null;

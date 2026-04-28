@@ -1,41 +1,63 @@
 <?php
 session_start();
+require_once '../config/database.php';
 
-// 1. SEGURANÇA: Verifica se é o admin logado
-$seuCpfAdmin = '71590928563'; 
+$seuCpfAdmin = '71590928563';
+
 if (!isset($_SESSION['logado']) || $_SESSION['usuario_cpf'] !== $seuCpfAdmin) {
     header('Location: ../index.php');
     exit;
 }
 
-// 2. Conexão com o banco
 try {
-    $pdo = new PDO("mysql:host=localhost;dbname=moda", "root", "");
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $pdo = Database::getInstance()->getConnection();
 
-    $id = $_GET['id'] ?? null;
+    $id   = intval($_GET['id'] ?? 0);
     $acao = $_GET['acao'] ?? '';
 
-    if ($id && $acao === 'toggle') {
-        // Busca o status atual da peça
-        $stmt = $pdo->prepare("SELECT status_estoque FROM roupas WHERE id = :id");
-        $stmt->execute(['id' => $id]);
-        $peca = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($id && $acao) {
 
-        if ($peca) {
-            // Inverte o status
-            $novoStatus = ($peca['status_estoque'] === 'disponivel') ? 'indisponivel' : 'disponivel';
+        // ── TOGGLE DE DISPONIBILIDADE ──
+        if ($acao === 'toggle') {
+            $stmt = $pdo->prepare("SELECT status_estoque FROM roupas WHERE id = :id");
+            $stmt->execute(['id' => $id]);
+            $peca = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Atualiza no banco de dados
-            $update = $pdo->prepare("UPDATE roupas SET status_estoque = :novo WHERE id = :id");
-            $update->execute([
-                'novo' => $novoStatus,
-                'id'   => $id
-            ]);
+            if ($peca) {
+                $novoStatus = ($peca['status_estoque'] === 'disponivel') ? 'indisponivel' : 'disponivel';
+                $upd = $pdo->prepare("UPDATE roupas SET status_estoque = :novo WHERE id = :id");
+                $upd->execute(['novo' => $novoStatus, 'id' => $id]);
+            }
+
+            header('Location: dashboard.php?secao=catalogo');
+            exit;
+        }
+
+        // ── EXCLUIR PEÇA ──
+        if ($acao === 'excluir') {
+            // Busca a imagem antes de deletar para removê-la do servidor
+            $stmt = $pdo->prepare("SELECT imagem_url FROM roupas WHERE id = :id");
+            $stmt->execute(['id' => $id]);
+            $peca = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($peca) {
+                // Remove do banco
+                $del = $pdo->prepare("DELETE FROM roupas WHERE id = :id");
+                $del->execute(['id' => $id]);
+
+                // Remove o arquivo de imagem do servidor (se existir)
+                $caminhoImagem = '../img/' . $peca['imagem_url'];
+                if (!empty($peca['imagem_url']) && file_exists($caminhoImagem)) {
+                    unlink($caminhoImagem);
+                }
+            }
+
+            header('Location: dashboard.php?secao=catalogo&status=excluido');
+            exit;
         }
     }
 
-    // 3. Volta para a página do catálogo
+    // Fallback: volta para o catálogo se nenhuma ação válida
     header('Location: dashboard.php?secao=catalogo');
     exit;
 
