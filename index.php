@@ -1136,9 +1136,9 @@
       </button>
 
       <?php if(isset($_SESSION['usuario_id'])): ?>
-    <button class="nav-btn" id="btnPerfil">
-        <span>OLÁ, <?php echo strtoupper($_SESSION['usuario_nome']); ?></span>
-    </button>
+   <a href="perfil.php" class="nav-btn" id="btnPerfil" style="text-decoration:none;">
+        <span>OLÁ, <?php echo strtoupper($_SESSION['usuario_nome']); ?> ✦</span>
+    </a>
     
         <button class="nav-btn" onclick="showPage('agendamento')">
           <span>Agendamento</span>
@@ -1416,6 +1416,15 @@
      JAVASCRIPT
      ============================================================ -->
   <script>
+    // Variáveis de Sessão injetadas pelo PHP para controle no JS
+    const USUARIO_LOGADO = <?php echo isset($_SESSION['usuario_id']) ? 'true' : 'false'; ?>;
+    const DADOS_USUARIO = <?php echo isset($_SESSION['usuario_id']) ? json_encode([
+        'id'       => $_SESSION['usuario_id'],
+        'nome'     => $_SESSION['usuario_nome'],
+        'cpf'      => $_SESSION['usuario_cpf'] ?? '',
+        'telefone' => $_SESSION['usuario_telefone'] ?? ''
+    ]) : 'null'; ?>;
+
     /* ============================================================
        STATE
        ============================================================ */
@@ -1557,6 +1566,11 @@
       document.getElementById('modalPreco').textContent = r.preco
         ? 'R$ ' + parseFloat(r.preco).toFixed(2).replace('.', ',') : '';
       document.getElementById('modalBtnAgendar').onclick = () => { fecharModal(); agendarRoupa(id); };
+
+      // Atualiza o texto do botão do modal conforme o status de login
+      const btnModal = document.getElementById('modalBtnAgendar');
+      btnModal.textContent = USUARIO_LOGADO ? 'AGENDAR AGORA' : 'FAÇA LOGIN / CADASTRO PARA AGENDAR';
+
       document.getElementById('modalOverlay').classList.add('open');
       document.body.style.overflow = 'hidden';
     }
@@ -1585,14 +1599,12 @@ function agendarRoupa(id) {
         
         // Preenche os dados do usuário automaticamente no Step 3
         if (DADOS_USUARIO) {
-            document.querySelector('input[name="nome"]').value = DADOS_USUARIO.nome;
-            document.querySelector('input[name="cpf"]').value = DADOS_USUARIO.cpf;
-            document.querySelector('input[name="telefone"]').value = DADOS_USUARIO.telefone;
+            if(document.getElementById('agNome')) document.getElementById('agNome').value = DADOS_USUARIO.nome;
+            if(document.getElementById('agCpf')) document.getElementById('agCpf').value = DADOS_USUARIO.cpf;
+            if(document.getElementById('agTel')) document.getElementById('agTel').value = DADOS_USUARIO.telefone;
         }
     } else {
-        // SE NÃO LOGADO: Abre o modal de login
-        const modal = document.getElementById('modalLoginOverlay');
-        if (modal) modal.style.display = 'flex';
+        abrirModalLogin();
     }
 }
 
@@ -1761,12 +1773,9 @@ function agendarRoupa(id) {
     const sel = document.getElementById('roupaSelector');
     if (!sel) return;
 
-    // Essa linha pergunta ao PHP se existe um usuário logado
-    const usuarioLogado = <?php echo isset($_SESSION['usuario_id']) ? 'true' : 'false'; ?>;
-
     sel.innerHTML = state.roupas.map(r => {
         // Se estiver logado, o botão vira "Agendar Agora". Se não, continua "Identifique-se"
-        const textoBotao = usuarioLogado ? "Agendar Agora" : "Identifique-se para Agendar";
+        const textoBotao = USUARIO_LOGADO ? "Agendar Agora" : "Identifique-se para Agendar";
         
         return `
             <div class="roupa-option ${state.agendamento.roupa_id == r.id ? 'selected' : ''}" id="ro-${r.id}">
@@ -2103,6 +2112,7 @@ function fecharModalLogin(e) {
       // Se você usa classes CSS para abrir/fechar, remova-a também:
       modal.classList.remove('open');
     }
+    modal.classList.remove('open');
     // Devolve o scroll para a página
     document.body.style.overflow = '';
   }
