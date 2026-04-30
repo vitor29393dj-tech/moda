@@ -2107,12 +2107,8 @@ function fecharModalLogin(e) {
   const modal = document.getElementById('modalLoginOverlay');
   
   if (!e || e.target === modal || e.target.classList.contains('modal-close')) {
-    if (modal) {
-      modal.style.display = 'none';
-      // Se você usa classes CSS para abrir/fechar, remova-a também:
-      modal.classList.remove('open');
-    }
-    modal.classList.remove('open');
+    if (modal) modal.classList.remove('open');
+    
     // Devolve o scroll para a página
     document.body.style.overflow = '';
   }
@@ -2184,7 +2180,7 @@ function confirmarSair() {
             <h2 class="gold-title">Crie seu cadastro</h2>
             <p class="subtitle">Registre-se para agendar seus serviços.</p>
             
-            <form id="formCadastro" action="logica_acesso.php" method="POST">
+            <form id="formRegistroModal" action="logica_acesso.php" method="POST">
     <input type="hidden" name="acao" value="cadastro">
 
     <div class="input-group">
